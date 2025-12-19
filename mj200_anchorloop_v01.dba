@@ -1,0 +1,15 @@
+rem --------------------------------
+rem Mini Jam 200: Freedom
+rem Game Entry: Anchor Loop
+rem JLMoondog - Josh Mooney
+rem --------------------------------
+
+rem setup screen -------------------
+set window on : set window layout 1, 1, 1
+set display mode 1024, 768, 32
+windowTitle$ = "MJ200: Anchor Loop"
+set window title windowTitle$
+
+autocam off : hide mouse
+sync on : sync rate 60
+
