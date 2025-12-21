@@ -17,29 +17,8 @@ rem declare variables --------------
 `system var
 DEBUG = 1 : `debug on / off
 
-`character stats
-playerSize# = 10.0 : `base stats
-playerSpeed# = 1.0
-playerTurnSpeed# = 6.0
-
-`landmark stats
-spawnX# = 385.0 : `spawn point
-spawnY# = playerSize#/2
-spawnZ# = 995.0
-
 rem initiate -----------------------
 _INITIATE:
-`create temp player
-make object cube 1, playerSize#
-color object 1, rgb(0, 200, 0)
-set object collision on 1
-position object 1, spawnX#, spawnY#, spawnZ#
-
-rem main game loop -----------------
-do
-rem debug ui -----------------------
-if DEBUG = 1
-endif
 
 rem update -------------------------
 _UPDATE:
@@ -50,6 +29,3 @@ _RESET:
 rem end ----------------------------
 _END:
 
-rem end loop -----------------------
-   sync
-loop
