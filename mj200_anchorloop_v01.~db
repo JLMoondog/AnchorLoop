@@ -10,44 +10,114 @@ set display mode 1024, 768, 32
 windowTitle$ = "MJ200: Anchor Loop"
 set window title windowTitle$
 
-autocam off : hide mouse
+autocam off : `hide mouse
 sync on : sync rate 60
 
 rem declare variables --------------
 `system var
 DEBUG = 1 : `debug on / off
+
 `character stats
 playerSize# = 10.0 : `base stats
 playerSpeed# = 1.0
 playerTurnSpeed# = 6.0
-`landmark stats
-spawnX# = 385.0
-spawnY# = playerSize#/2
-spawnZ# = 995.0
+playerAngle# = 0.0
+playerHeight# = playerSize# / 2
+
+`landmark stats (divide original coor's by 2 * 100 to fit within DB limits)
+spawnX# = 1900.0 : `spawn point
+spawnY# = 0.0
+spawnZ# = 450.0
 
 rem initiate -----------------------
-_INITIATE:
+`_INITIATE:
+`setup enviroment
+fog on : fog color rgb(255, 255, 255)
+fog distance 400
+backdrop on : color backdrop rgb(0, 0, 0)
+set camera range 1, 10000
+cls
+
 `create temp player
 make object cube 1, playerSize#
 color object 1, rgb(0, 200, 0)
 set object collision on 1
-position object 1, spawnX#, spawnY#, spawnZ#
+position object 1, spawnX#, spawnY#+playerHeight#, spawnZ#
+rotate object 1, object angle x(1), playerAngle#, object angle z(1)
 
+`create matrix
+mapWidth = 64
+mapHeight = 64
+tileSize# = 100
+
+mapSizeX# = mapWidth * tileSize#
+mapSizeZ# = mapHeight * tileSize#
+mapGridX# = mapWidth
+mapGridZ# = mapHeight
+
+`matrix hieghtmap load
+load bitmap "media/heightmap.bmp", 1
+dim heightMap(64,64)
+
+for hx = 1 to 64 : `grab height info
+   for hy = 1 to 64
+      rawValue = point(hx,hy)
+      heightMap(hx,hy) = rgbr(rawValue)
+   next hy
+next hx
+
+delete bitmap 1
+
+`build matrix
+make matrix 1, mapSizeX#, mapSizeZ#, mapGridX#, mapGridZ#
+position matrix 1, 0, 0, 0
+
+`set matrix height
+for x = 0 to mapWidth
+   for z = 0 to mapHeight
+       set matrix height 1, x, z, heightMap(x,z)
+   next z
+next x
+
+`textureing terrain
+load image "media/maptemp.bmp", 10
+prepare matrix texture 1, 10, 1, 1
+set matrix 1, 1, 1, 1, 1, 1, 1, 1
+update matrix 1
 
 rem main game loop -----------------
 do
 rem debug ui -----------------------
 if DEBUG = 1
+   set cursor 0, 0
+   print "  DEBUG ACTIVE"
+   print "  Player X: ";object position x(1)
+   print "  Player Y: ";object position y(1)
+   print "  Player Z: ";object position z(1)
+   print "  Player A: ";object angle y(1)
 endif
 
+rem player controls ----------------
+if upkey() = 1 then move object 1, playerSpeed#
+if downkey() = 1 then move object 1, 0-playerSpeed#
+if rightkey() = 1 then playerAngle# = wrapvalue(playerAngle#+playerTurnSpeed#)
+if leftkey() = 1 then playerAngle# = wrapvalue(playerAngle#-playerTurnSpeed#)
+
 rem update -------------------------
-_UPDATE:
+`_UPDATE:
+`player update
+rotate object 1, object angle x(1), playerAngle#, object angle z(1)
+playerHeight# = get ground height(1, object position x(1), object position z(1)) + (playerSize#/2)
+position object 1, object position x(1), playerHeight#, object position z(1)
+`camera update
+set camera to follow object position x(1), object position y(1), object position z(1), 0.0, 90.0, playerHeight#+100.0, 50.0, 0
+point camera object position x(1), playerHeight#, object position z(1)
 
 rem reset --------------------------
-_RESET:
+`_RESET:
 
 rem end ----------------------------
-_END:
+`_END:
 
 rem end loop -----------------------
    sync
