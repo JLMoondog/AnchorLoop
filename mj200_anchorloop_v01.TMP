@@ -24,17 +24,30 @@ playerTurnSpeed# = 6.0
 playerAngle# = 0.0
 playerHeight# = playerSize# / 2
 
+`character stamina / steps
+steps = 100 : `remaining steps
+stepsMax = 100 : `max steps for reset
+stamina = 120 : `current stamina drain
+staminaMax = 120 : `max stamina to restart stamina
+moving = 0 : `check if character is moving
+deaths = 0 : `count number of deaths
+
 `landmark stats (divide original coor's by 2 * 100 to fit within DB limits)
 spawnX# = 1900.0 : `spawn point
 spawnY# = 0.0
 spawnZ# = 450.0
 
+anchorX# = 3120 : `anchor point
+anchorY# = 50
+anchorZ# = 3240
+
 rem initiate -----------------------
 `_INITIATE:
 `setup enviroment
+fogDistance# = 800
 fog on : fog color rgb(255, 255, 255)
-fog distance 400
-backdrop on : color backdrop rgb(0, 0, 0)
+fog distance fogDistance#
+backdrop on : color backdrop rgb(255, 255, 255)
 set camera range 1, 10000
 cls
 
@@ -56,17 +69,37 @@ mapGridX# = mapWidth
 mapGridZ# = mapHeight
 
 `matrix hieghtmap load
-load bitmap "media/heightmap.bmp", 1
+
 dim heightMap(64,64)
+dataSize = 64*64
+dim mapData(dataSize)
+saveData = 0
 
-for hx = 1 to 64 : `grab height info
-   for hy = 1 to 64
-      rawValue = point(hx,hy)
-      heightMap(hx,hy) = rgbr(rawValue)
-   next hy
-next hx
-
-delete bitmap 1
+if file exist("media/mapdata.map")=0
+   load bitmap "media/heightmap.bmp", 1
+   for hx = 1 to 64 : `grab height info
+      for hy = 1 to 64
+         rawValue = point(hx,hy)
+         heightMap(hx,hy) = rgbr(rawValue)
+      next hy
+   next hx
+   for smx = 1 to 64
+      for smy = 1 to 64
+         inc saveData, 1
+         mapData(saveData) = heightMap(smx,smy)
+      next smy
+   next smx
+   save array "media/mapdata.map", mapData(dataSize)
+   delete bitmap 1
+else
+   load array "media/mapdata.map", mapData(dataSize)
+   for smx = 1 to 64
+      for smy = 1 to 64
+         inc saveData, 1
+         heightMap(smx,smy) = mapData(saveData)
+      next smy
+   next smx
+endif
 
 `build matrix
 make matrix 1, mapSizeX#, mapSizeZ#, mapGridX#, mapGridZ#
@@ -80,28 +113,80 @@ for x = 0 to mapWidth
 next x
 
 `textureing terrain
-load image "media/maptemp.bmp", 10
-prepare matrix texture 1, 10, 1, 1
+load image "media/maptexture.bmp", 10
+prepare matrix texture 1, 10, 2, 2
 set matrix 1, 1, 1, 1, 1, 1, 1, 1
+`set texture based on height
+for tx = 0 to 63
+   for ty = 0 to 63
+      tileHeight = heightMap(tx+1,ty+1)
+      if tileHeight < 20 then tileSelect = 4
+      if tileHeight > 19 and tileHeight < 65 then tileSelect = 2
+      if tileHeight > 64 and tileHeight < 130 then tileSelect = 1
+      if tileHeight > 129 then tileSelect = 3
+      set matrix tile 1, tx, ty, tileSelect
+   next ty
+next tx
 update matrix 1
+
+`create/load location objects
+`create anchor
+make object box 2, 100, 1000, 100
+color object 2, rgb(64,64,255)
+set object collision on 2
+anchorY# = get ground height( 1, anchorX#, anchorZ#)+450
+position object 2, anchorX#, anchorY#, anchorZ#
 
 rem main game loop -----------------
 do
 rem debug ui -----------------------
 if DEBUG = 1
+   ink rgb(0,0,0),rgb(255,255,255)
    set cursor 0, 0
    print "  DEBUG ACTIVE"
    print "  Player X: ";object position x(1)
    print "  Player Y: ";object position y(1)
    print "  Player Z: ";object position z(1)
    print "  Player A: ";object angle y(1)
+   print "  IsMoving: ";moving
+   print "  Steps Left: ";steps
+   print "  Stamina: ";stamina
+   print "  Deaths: ";deaths
 endif
 
 rem player controls ----------------
-if upkey() = 1 then move object 1, playerSpeed#
-if downkey() = 1 then move object 1, 0-playerSpeed#
-if rightkey() = 1 then playerAngle# = wrapvalue(playerAngle#+playerTurnSpeed#)
-if leftkey() = 1 then playerAngle# = wrapvalue(playerAngle#-playerTurnSpeed#)
+moving = 0 : `reset moving check
+if upkey() = 1
+   move object 1, playerSpeed#
+   moving = 1
+endif
+if downkey() = 1
+   move object 1, 0-playerSpeed#
+   moving = 1
+endif
+if rightkey() = 1
+   playerAngle# = wrapvalue(playerAngle#+playerTurnSpeed#)
+   moving = 1
+endif
+if leftkey() = 1
+   playerAngle# = wrapvalue(playerAngle#-playerTurnSpeed#)
+   moving = 1
+endif
+` steps and stamina --------------
+if moving = 1 : `check if moving
+   dec stamina, 1
+   if stamina = 0 : `if stamina is 0, use step
+      dec steps
+      stamina = staminaMax
+   endif
+endif
+` death and respawn
+if steps = 0
+   steps = stepsMax
+   inc deaths, 1
+   position object 1, spawnX#, spawnY#+playerHeight#, spawnZ#
+   rotate object 1, object angle x(1), 0.0, object angle z(1)
+endif
 
 rem update -------------------------
 `_UPDATE:
