@@ -51,6 +51,10 @@ backdrop on : color backdrop rgb(255, 255, 255)
 set camera range 1, 10000
 cls
 
+`setup skybox
+load object "media/skybox/mm.x", 2
+set object 2,1,1,0,1,1,0,1
+
 `create temp player
 make object cube 1, playerSize#
 color object 1, rgb(0, 200, 0)
@@ -131,11 +135,15 @@ update matrix 1
 
 `create/load location objects
 `create anchor
-make object box 2, 100, 1000, 100
-color object 2, rgb(64,64,255)
-set object collision on 2
+make object box 10, 100, 1000, 100
+color object 10, rgb(64,64,255)
+set object collision on 10
 anchorY# = get ground height( 1, anchorX#, anchorZ#)+450
-position object 2, anchorX#, anchorY#, anchorZ#
+position object 10, anchorX#, anchorY#, anchorZ#
+
+`set initial camera position
+position camera 3600, 355, 3250
+point camera object position x(1), object position y(1), object position z(1)
 
 rem main game loop -----------------
 do
@@ -197,6 +205,8 @@ position object 1, object position x(1), playerHeight#, object position z(1)
 `camera update
 set camera to follow object position x(1), object position y(1), object position z(1), 0.0, 90.0, playerHeight#+100.0, 50.0, 0
 point camera object position x(1), playerHeight#, object position z(1)
+`skybox
+position object 2, camera position x(), camera position y(), camera position z()
 
 rem reset --------------------------
 `_RESET:
